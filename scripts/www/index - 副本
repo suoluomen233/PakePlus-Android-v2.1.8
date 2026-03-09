@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>骑士看板 v6.3</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #2f80ed;
+            --danger: #eb5757;
+            --warn: #f2994a;
+            --bg: #eef3f8;
+            --card: rgba(255,255,255,0.96);
+            --border: #dbe4ee;
+            --text: #2c3e50;
+            --subtext: #7f8c98;
+            --shadow: 0 6px 18px rgba(31,60,90,.08);
+            --radius: 12px;
+            --input-offset: 0px;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: radial-gradient(circle at top left, #f8fbff 0%, #eef3f8 45%, #eaf0f6 100%);
+        }
+
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            color: var(--text);
+        }
+
+        .app {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary), #4b9fff);
+            color: #fff;
+            padding: 0 12px;
+            min-height: 46px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 14px rgba(47,128,237,.22);
+        }
+
+        .header h2 {
+            margin: 0;
+            font-size: .92rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .header .btns {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .header button {
+            background: rgba(255,255,255,.16);
+            border: 1px solid rgba(255,255,255,.72);
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 7px;
+            font-size: .66rem;
+            cursor: pointer;
+        }
+
+        .container {
+            flex: 1;
+            min-height: 0;
+            padding: 8px;
+            display: grid;
+            grid-template-rows: auto 132px minmax(220px, 1fr);
+            gap: 8px;
+            overflow: hidden;
+        }
+
+        .calendar-card,
+        .detail-card,
+        .stat-card {
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,.55);
+            box-shadow: var(--shadow);
+            border-radius: var(--radius);
+        }
+
+        .calendar-card {
+            padding: 6px 8px;
+            min-height: 0;
+            overflow: hidden;
+            transition: all .25s ease;
+        }
+
+        .calendar-card.collapsed .calendar-grid {
+            display: none;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .calendar-left,
+        .calendar-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .calendar-title {
+            font-size: .8rem;
+            font-weight: 700;
+            color: var(--text);
+            min-width: 68px;
+            text-align: center;
+        }
+
+        .mini-btn,
+        .toggle-btn {
+            border: 1px solid var(--border);
+            background: #f8fbff;
+            border-radius: 7px;
+            font-size: .68rem;
+            padding: 2px 8px;
+            cursor: pointer;
+        }
+
+        .toggle-btn {
+            color: var(--primary);
+            font-weight: 700;
+            font-size: .66rem;
+        }
+
+        #editModeHint {
+            font-size: .6rem;
+            color: var(--warn);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        .day-name {
+            color: var(--subtext);
+            font-size: .58rem;
+            padding: 2px 0;
+            font-weight: 600;
+        }
+
+        .day {
+            padding: 5px 0;
+            border-radius: 7px;
+            font-size: .72rem;
+            position: relative;
+            cursor: pointer;
+            transition: all .18s ease;
+            user-select: none;
+            background: transparent;
+        }
+
+        .day.empty {
+            visibility: hidden;
+        }
+
+        .day:hover {
+            background: #edf5ff;
+        }
+
+        .day.has-data::after {
+            content: "";
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: var(--primary);
+        }
+
+        .day.today-mark {
+            border: 1px solid rgba(47,128,237,.5);
+        }
+
+        .day.active {
+            background: linear-gradient(135deg, var(--primary), #58a6ff) !important;
+            color: #fff;
+            font-weight: 700;
+            box-shadow: 0 4px 10px rgba(47,128,237,.18);
+        }
+
+        .day.future {
+            color: #b6c0ca;
+        }
+
+        .detail-card {
+            height: 132px;
+            min-height: 132px;
+            max-height: 132px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 5px;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #edf1f6;
+            flex-shrink: 0;
+        }
+
+        .detail-header h5 {
+            margin: 0;
+            font-size: .78rem;
+            font-weight: 700;
+            color: var(--text);
+            min-width: 0;
+        }
+
+        .detail-header h5.editing {
+            color: var(--danger);
+        }
+
+        #daySummary {
+            font-size: .64rem;
+            color: var(--primary);
+            font-weight: 700;
+            background: #f2f8ff;
+            padding: 3px 8px;
+            border-radius: 999px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .log-list {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-right: 2px;
+        }
+
+        .empty-state {
+            color: var(--subtext);
+            font-size: .72rem;
+            text-align: center;
+            padding: 22px 8px;
+        }
+
+        .log-item {
+            background: linear-gradient(180deg, #fbfdff 0%, #f5f8fc 100%);
+            border: 1px solid #e8eef5;
+            border-radius: 10px;
+            padding: 7px 8px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            transition: all .18s ease;
+        }
+
+        .log-top {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 3px;
+        }
+
+        .log-meta {
+            font-size: .62rem;
+            color: var(--subtext);
+            font-weight: 700;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .log-tags {
+            flex: 1;
+            min-width: 0;
+            font-size: .62rem;
+            color: var(--primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .del-btn {
+            color: #b5bec8;
+            border: none;
+            background: transparent;
+            font-size: .92rem;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0 2px;
+            flex-shrink: 0;
+        }
+
+        .log-text {
+            font-size: .69rem;
+            color: #5d6d7e;
+            line-height: 1.35;
+            word-break: break-all;
+        }
+
+        .log-item.collapsed .log-text {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .log-item.expanded .log-text {
+            display: block;
+            overflow: visible;
+        }
+
+        .stats-panel {
+            min-height: 0;
+            display: grid;
+            grid-template-rows: 88px minmax(0, 1fr);
+            gap: 8px;
+        }
+
+        .stat-card {
+            overflow: hidden;
+        }
+
+        .expense-card {
+            padding: 10px;
+        }
+
+        .chart-card {
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+
+        .stat-card h4 {
+            margin: 0 0 8px;
+            font-size: .67rem;
+            color: var(--subtext);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+        }
+
+        .progress-container {
+            height: 12px;
+            background: #edf3f9;
+            border-radius: 999px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,.03);
+        }
+
+        #expenseBar {
+            height: 100%;
+            width: 0%;
+            transition: width .35s ease;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--primary), #5daeff);
+        }
+
+        .budget-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .budget-row input {
+            flex: 1;
+            min-width: 0;
+            height: 28px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0 10px;
+            font-size: .7rem;
+            outline: none;
+            background: #fbfdff;
+        }
+
+        .budget-row button {
+            height: 28px;
+            border: none;
+            background: linear-gradient(135deg, var(--primary), #5aa8ff);
+            color: #fff;
+            border-radius: 8px;
+            padding: 0 10px;
+            font-size: .68rem;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .chart-card .chart-container {
+            flex: 1;
+            min-height: 0;
+            width: 100%;
+            position: relative;
+        }
+
+        .chart-container {
+            width: 100%;
+            position: relative;
+            min-height: 160px;
+        }
+
+        .input-area {
+            background: rgba(255,255,255,.98);
+            border-top: 1px solid var(--border);
+            padding: 8px 12px calc(8px + env(safe-area-inset-bottom) + var(--input-offset));
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+            box-shadow: 0 -2px 10px rgba(31,60,90,.03);
+            transition: padding-bottom .2s ease;
+        }
+
+        #mainInput {
+            flex: 1;
+            min-width: 0;
+            height: 38px;
+            border: 1.5px solid var(--border);
+            border-radius: 19px;
+            padding: 0 14px;
+            font-size: .82rem;
+            outline: none;
+            transition: all .2s ease;
+            background: #fbfdff;
+        }
+
+        #mainInput:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(47,128,237,.08);
+        }
+
+        .btn-send {
+            border: none;
+            border-radius: 19px;
+            padding: 0 16px;
+            background: linear-gradient(135deg, var(--primary), #55a3ff);
+            color: #fff;
+            font-size: .78rem;
+            font-weight: 700;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .hidden-file {
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                grid-template-columns: 320px 1fr;
+                grid-template-rows: 1fr minmax(220px, 260px);
+                grid-template-areas:
+                    "calendar detail"
+                    "calendar stats";
+            }
+
+            .calendar-card { grid-area: calendar; }
+            .detail-card {
+                grid-area: detail;
+                height: auto;
+                min-height: 0;
+                max-height: none;
+            }
+            .stats-panel { grid-area: stats; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <div class="header">
+        <h2>🏍️ 骑士看板 v6.3</h2>
+        <div class="btns">
+            <button onclick="gotoToday()">今</button>
+            <button onclick="exportData()">导出</button>
+            <button onclick="triggerImport()">导入</button>
+            <button onclick="clearAllData()">清空</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="calendar-card" id="calendarCard">
+            <div class="calendar-header">
+                <div class="calendar-left">
+                    <button class="mini-btn" onclick="changeMonth(-1)">‹</button>
+                    <span class="calendar-title" id="calendarTitle"></span>
+                    <button class="mini-btn" onclick="changeMonth(1)">›</button>
+                </div>
+                <div class="calendar-right">
+                    <button class="toggle-btn" onclick="toggleCalendar()" id="toggleCalendarBtn">收起</button>
+                    <span id="editModeHint" style="display:none;">补录模式</span>
+                </div>
+            </div>
+
+            <div class="calendar-grid" id="calendarGrid">
+                <div class="day-name">一</div>
+                <div class="day-name">二</div>
+                <div class="day-name">三</div>
+                <div class="day-name">四</div>
+                <div class="day-name">五</div>
+                <div class="day-name">六</div>
+                <div class="day-name">日</div>
+            </div>
+        </div>
+
+        <div class="detail-card">
+            <div class="detail-header">
+                <h5 id="displayDateTitle">明细</h5>
+                <span id="daySummary">无记录</span>
+            </div>
+            <div class="log-list" id="logList"></div>
+        </div>
+
+        <div class="stats-panel">
+            <div class="stat-card expense-card">
+                <h4>
+                    <span>月支出</span>
+                    <span id="expenseValue">¥0 / 3000</span>
+                </h4>
+                <div class="progress-container">
+                    <div id="expenseBar"></div>
+                </div>
+                <div class="budget-row">
+                    <input id="budgetInput" type="number" min="0" placeholder="设置月预算，例如 3000" />
+                    <button onclick="saveBudget()">保存预算</button>
+                </div>
+            </div>
+
+            <div class="stat-card chart-card">
+                <h4>
+                    <span>油耗趋势 (L/100km)</span>
+                    <span id="fuelStatText">暂无数据</span>
+                </h4>
+                <div class="chart-container">
+                    <canvas id="lineChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="input-area" id="inputArea">
+        <input type="text" id="mainInput" placeholder="可以像日记一样输入，例如：今天加油50块，跑了120公里" />
+        <button class="btn-send" onclick="processInput()">提交</button>
+    </div>
+
+    <input class="hidden-file" id="importFile" type="file" accept=".json,application/json" />
+</div>
+
+<script>
+    const DB_KEY = "moto_v5_db";
+    const BUDGET_KEY = "moto_v5_budget";
+    const CALENDAR_COLLAPSED_KEY = "moto_v5_calendar_collapsed";
+
+    let db = JSON.parse(localStorage.getItem(DB_KEY)) || {};
+    let monthBudget = Number(localStorage.getItem(BUDGET_KEY)) || 3000;
+    let calendarCollapsed = localStorage.getItem(CALENDAR_COLLAPSED_KEY) === "1";
+    let lineChart = null;
+
+    function formatDateLocal(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+    }
+
+    const today = new Date();
+    const todayStr = formatDateLocal(today);
+    let activeDate = todayStr;
+    let currentViewYear = today.getFullYear();
+    let currentViewMonth = today.getMonth();
+
+    function init() {
+        document.getElementById("budgetInput").value = monthBudget;
+        applyCalendarState();
+
+        lineChart = new Chart(document.getElementById("lineChart"), {
+            type: "line",
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    borderColor: "#27ae60",
+                    tension: 0.35,
+                    pointRadius: 2.5,
+                    pointHoverRadius: 3,
+                    borderWidth: 2,
+                    fill: true,
+                    backgroundColor: "rgba(39,174,96,0.12)"
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return `${ctx.parsed.y} L/100km`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { font: { size: 8 } },
+                        grid: { display: false }
+                    },
+                    y: {
+                        ticks: { font: { size: 8 } },
+                        grid: { color: "rgba(0,0,0,0.05)" }
+                    }
+                }
+            }
+        });
+
+        bindEvents();
+        refreshAll();
+        showDayDetail(activeDate);
+    }
+
+    function bindEvents() {
+        const input = document.getElementById("mainInput");
+        input.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") processInput();
+        });
+
+        input.addEventListener("focus", function() {
+            setTimeout(() => {
+                ensureInputVisible();
+                refreshChartSize();
+            }, 200);
+        });
+
+        document.getElementById("importFile").addEventListener("change", importData);
+
+        window.addEventListener("resize", function() {
+            refreshChartSize();
+        });
+
+        setupVisualViewport();
+    }
+
+    function setupVisualViewport() {
+        if (!window.visualViewport) return;
+
+        const handleViewport = () => {
+            const vv = window.visualViewport;
+            const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+            const offset = keyboardHeight > 80 ? keyboardHeight : 0;
+            document.documentElement.style.setProperty("--input-offset", offset + "px");
+
+            if (offset > 0) ensureInputVisible();
+            refreshChartSize();
+        };
+
+        window.visualViewport.addEventListener("resize", handleViewport);
+        window.visualViewport.addEventListener("scroll", handleViewport);
+    }
+
+    function ensureInputVisible() {
+        const inputArea = document.getElementById("inputArea");
+        if (inputArea && window.innerWidth < 768) {
+            inputArea.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
+    }
+
+    function refreshChartSize() {
+        if (!lineChart) return;
+        setTimeout(() => {
+            lineChart.resize();
+            lineChart.update("none");
+        }, 50);
+    }
+
+    function applyCalendarState() {
+        const card = document.getElementById("calendarCard");
+        const btn = document.getElementById("toggleCalendarBtn");
+        if (!card || !btn) return;
+
+        if (calendarCollapsed) {
+            card.classList.add("collapsed");
+            btn.innerText = "展开";
+        } else {
+            card.classList.remove("collapsed");
+            btn.innerText = "收起";
+        }
+    }
+
+    function toggleCalendar() {
+        calendarCollapsed = !calendarCollapsed;
+        localStorage.setItem(CALENDAR_COLLAPSED_KEY, calendarCollapsed ? "1" : "0");
+        applyCalendarState();
+        refreshChartSize();
+    }
+
+    function saveDB() {
+        localStorage.setItem(DB_KEY, JSON.stringify(db));
+    }
+
+    function refreshAll() {
+        saveDB();
+        renderCalendar();
+        updateCharts();
+    }
+
+    function saveBudget() {
+        const val = Number(document.getElementById("budgetInput").value);
+        if (!val || val < 0) {
+            alert("请输入有效预算");
+            return;
+        }
+        monthBudget = val;
+        localStorage.setItem(BUDGET_KEY, String(monthBudget));
+        updateCharts();
+        alert("预算已保存");
+    }
+
+    function processInput() {
+        const inputEl = document.getElementById("mainInput");
+        const val = inputEl.value.trim();
+        if (!val) return;
+
+        const targetDate = activeDate;
+        const parsed = parseSmartRecord(val);
+
+        if (!db[targetDate]) {
+            db[targetDate] = {
+                entries: [],
+                totalExp: 0,
+                avgFuel: null
+            };
+        }
+
+        const displayTime =
+            targetDate === todayStr
+                ? new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                : "补录";
+
+        db[targetDate].entries.push({
+            id: Date.now() + Math.floor(Math.random() * 1000),
+            time: displayTime,
+            text: val,
+            expense: parsed.expense,
+            distance: parsed.distance,
+            fuelAmount: parsed.fuelAmount,
+            fuel: parsed.fuel
+        });
+
+        recalculateDay(targetDate);
+        refreshAll();
+        showDayDetail(targetDate);
+
+        inputEl.value = "";
+        inputEl.focus();
+    }
+
+    function parseSmartRecord(text) {
+        const normalized = text
+            .replace(/，/g, ",")
+            .replace(/。/g, ".")
+            .replace(/：/g, ":")
+            .replace(/；/g, ";")
+            .replace(/\s+/g, " ");
+
+        const expense = parseExpense(normalized);
+        const distance = parseDistance(normalized);
+        const fuelAmount = parseFuelAmount(normalized);
+
+        let fuel = null;
+        if (distance && fuelAmount && distance > 0 && fuelAmount >= 0) {
+            fuel = {
+                d: distance,
+                a: fuelAmount,
+                calc: Number(((fuelAmount / distance) * 100).toFixed(1))
+            };
+        }
+
+        return { expense, distance, fuelAmount, fuel };
+    }
+
+    function parseExpense(text) {
+        let total = 0;
+
+        const explicitMoney = /(\d+(?:\.\d+)?)\s*(元钱|块钱|元|块|¥)/gi;
+        let m;
+        while ((m = explicitMoney.exec(text)) !== null) {
+            const v = parseFloat(m[1]);
+            if (!isNaN(v)) total += v;
+        }
+
+        const keywordRules = [
+            /(?:花了|花费|支出|用了|消费|付款|付了|开销|花)\s*(\d+(?:\.\d+)?)/gi,
+            /(?:加油|油费|停车费|停车|饭钱|早餐|午饭|晚饭|吃饭|买菜|维修|保养|过路费|路费|洗车)\s*(\d+(?:\.\d+)?)/gi
+        ];
+
+        keywordRules.forEach(reg => {
+            let x;
+            while ((x = reg.exec(text)) !== null) {
+                const v = parseFloat(x[1]);
+                if (!isNaN(v)) total += v;
+            }
+        });
+
+        return Number(total.toFixed(2));
+    }
+
+    function parseDistance(text) {
+        let m = text.match(/(\d+(?:\.\d+)?)\s*(公里|km|KM)/);
+        if (m) return parseFloat(m[1]);
+
+        m = text.match(/(\d+(?:\.\d+)?)多\s*(公里|km)/i);
+        if (m) return parseFloat(m[1]);
+
+        m = text.match(/(?:跑了|骑了|行驶了|开了|来回|往返|跑单|送了)\s*(\d+(?:\.\d+)?)/);
+        if (m) return parseFloat(m[1]);
+
+        return null;
+    }
+
+    function parseFuelAmount(text) {
+        let m = text.match(/(\d+(?:\.\d+)?)\s*(升油|升|L|l)/);
+        if (m) return parseFloat(m[1]);
+
+        m = text.match(/(?:用了|烧了|消耗了|耗了)\s*(\d+(?:\.\d+)?)\s*(?:升|L|l|油)/i);
+        if (m) return parseFloat(m[1]);
+
+        return null;
+    }
+
+    function recalculateDay(date) {
+        if (!db[date]) return;
+
+        let dayTotal = 0;
+        let fuelList = [];
+
+        db[date].entries.forEach(e => {
+            dayTotal += Number(e.expense || 0);
+            if (e.fuel && e.fuel.calc !== null && e.fuel.calc !== undefined) {
+                fuelList.push(Number(e.fuel.calc));
+            }
+        });
+
+        db[date].totalExp = dayTotal;
+        db[date].avgFuel = fuelList.length
+            ? Number((fuelList.reduce((a, b) => a + b, 0) / fuelList.length).toFixed(1))
+            : null;
+    }
+
+    function showDayDetail(date) {
+        activeDate = date;
+
+        const titleEl = document.getElementById("displayDateTitle");
+        const hintEl = document.getElementById("editModeHint");
+        const inputEl = document.getElementById("mainInput");
+
+        const [year, month] = date.split("-");
+        currentViewYear = Number(year);
+        currentViewMonth = Number(month) - 1;
+
+        if (date !== todayStr) {
+            titleEl.innerText = `补录：${date}`;
+            titleEl.classList.add("editing");
+            hintEl.style.display = "inline";
+            inputEl.placeholder = `补录 ${date} 的数据...`;
+        } else {
+            titleEl.innerText = "今日记录";
+            titleEl.classList.remove("editing");
+            hintEl.style.display = "none";
+            inputEl.placeholder = "像日记一样输入：今天加油50块，跑了120公里";
+        }
+
+        const list = document.getElementById("logList");
+        const summary = document.getElementById("daySummary");
+        list.innerHTML = "";
+
+        if (db[date] && db[date].entries.length) {
+            const dayData = db[date];
+            summary.innerHTML = `¥${dayData.totalExp.toFixed(1)}${dayData.avgFuel ? " | " + dayData.avgFuel + "L" : ""}`;
+
+            dayData.entries.slice().reverse().forEach(e => {
+                const item = document.createElement("div");
+                item.className = "log-item collapsed";
+
+                item.onclick = function() {
+                    this.classList.toggle("collapsed");
+                    this.classList.toggle("expanded");
+                };
+
+                const tags = [];
+                if (e.expense > 0) tags.push(`支出¥${e.expense}`);
+                if (e.distance) tags.push(`${e.distance}km`);
+                if (e.fuelAmount) tags.push(`${e.fuelAmount}L`);
+                if (e.fuel) tags.push(`油耗${e.fuel.calc}L`);
+
+                item.innerHTML = `
+                    <div class="log-top">
+                        <span class="log-meta">${e.time}</span>
+                        <span class="log-tags">${tags.join(" ｜ ") || "普通记录"}</span>
+                        <button class="del-btn" onclick="event.stopPropagation();deleteEntry('${date}', ${e.id})">×</button>
+                    </div>
+                    <div class="log-text">${escapeHtml(e.text)}</div>
+                `;
+                list.appendChild(item);
+            });
+        } else {
+            summary.innerText = "无记录";
+            list.innerHTML = `<div class="empty-state">这一天还没有记录，开始补一条吧</div>`;
+        }
+
+        renderCalendar();
+    }
+
+    function renderCalendar() {
+        const grid = document.getElementById("calendarGrid");
+        document.getElementById("calendarTitle").innerText = `${currentViewYear}.${currentViewMonth + 1}`;
+
+        grid.innerHTML = `
+            <div class="day-name">一</div>
+            <div class="day-name">二</div>
+            <div class="day-name">三</div>
+            <div class="day-name">四</div>
+            <div class="day-name">五</div>
+            <div class="day-name">六</div>
+            <div class="day-name">日</div>
+        `;
+
+        const firstDay = new Date(currentViewYear, currentViewMonth, 1).getDay() || 7;
+        const daysInMonth = new Date(currentViewYear, currentViewMonth + 1, 0).getDate();
+
+        for (let i = 1; i < firstDay; i++) {
+            const empty = document.createElement("div");
+            empty.className = "day empty";
+            empty.innerText = ".";
+            grid.appendChild(empty);
+        }
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${currentViewYear}-${String(currentViewMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+            const dayEl = document.createElement("div");
+            dayEl.className = "day";
+
+            if (db[dateStr] && db[dateStr].entries && db[dateStr].entries.length) dayEl.classList.add("has-data");
+            if (dateStr === activeDate) dayEl.classList.add("active");
+            if (dateStr === todayStr) dayEl.classList.add("today-mark");
+            if (dateStr > todayStr) dayEl.classList.add("future");
+
+            dayEl.innerText = d;
+            dayEl.onclick = () => showDayDetail(dateStr);
+            grid.appendChild(dayEl);
+        }
+    }
+
+    function changeMonth(offset) {
+        currentViewMonth += offset;
+        if (currentViewMonth < 0) {
+            currentViewMonth = 11;
+            currentViewYear--;
+        } else if (currentViewMonth > 11) {
+            currentViewMonth = 0;
+            currentViewYear++;
+        }
+        renderCalendar();
+        updateCharts();
+    }
+
+    function gotoToday() {
+        showDayDetail(todayStr);
+    }
+
+    function deleteEntry(date, id) {
+        if (!confirm("删除该条记录？")) return;
+        if (!db[date] || !db[date].entries) return;
+
+        db[date].entries = db[date].entries.filter(e => e.id !== id);
+
+        if (!db[date].entries.length) delete db[date];
+        else recalculateDay(date);
+
+        refreshAll();
+        showDayDetail(date);
+    }
+
+    function clearAllData() {
+        if (!confirm("⚠️ 清空所有历史数据？")) return;
+        db = {};
+        refreshAll();
+        showDayDetail(todayStr);
+    }
+
+    function updateCharts() {
+        const curMonth = `${currentViewYear}-${String(currentViewMonth + 1).padStart(2, "0")}`;
+        let monthExpense = 0;
+        let fuelPoints = [];
+
+        Object.keys(db).sort().forEach(date => {
+            const item = db[date];
+            if (date.startsWith(curMonth)) {
+                monthExpense += Number(item.totalExp || 0);
+                if (item.avgFuel !== null && item.avgFuel !== undefined) {
+                    fuelPoints.push({
+                        x: date.substring(5),
+                        y: Number(item.avgFuel)
+                    });
+                }
+            }
+        });
+
+        const percentage = monthBudget > 0 ? Math.min((monthExpense / monthBudget) * 100, 100) : 0;
+        const expenseBar = document.getElementById("expenseBar");
+        expenseBar.style.width = percentage + "%";
+        expenseBar.style.background =
+            percentage >= 100
+                ? "linear-gradient(90deg, #eb5757, #ff7676)"
+                : percentage >= 90
+                ? "linear-gradient(90deg, #f2994a, #ffb366)"
+                : "linear-gradient(90deg, #2f80ed, #5daeff)";
+
+        document.getElementById("expenseValue").innerText = `¥${monthExpense.toFixed(0)} / ${monthBudget}`;
+
+        if (fuelPoints.length) {
+            const avgFuel = fuelPoints.reduce((sum, item) => sum + item.y, 0) / fuelPoints.length;
+            document.getElementById("fuelStatText").innerText = `月均 ${avgFuel.toFixed(1)}L`;
+        } else {
+            document.getElementById("fuelStatText").innerText = "暂无数据";
+        }
+
+        lineChart.data.labels = fuelPoints.map(p => p.x);
+        lineChart.data.datasets[0].data = fuelPoints.map(p => p.y);
+        refreshChartSize();
+    }
+
+    function exportData() {
+        const payload = {
+            version: "6.3",
+            exportTime: new Date().toLocaleString(),
+            budget: monthBudget,
+            data: db
+        };
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], {
+            type: "application/json"
+        });
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `骑士看板备份_${todayStr}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function triggerImport() {
+        document.getElementById("importFile").click();
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const result = JSON.parse(e.target.result);
+                const importedDB = result.data || result;
+
+                if (!importedDB || typeof importedDB !== "object") {
+                    throw new Error("数据内容无效");
+                }
+
+                if (!confirm("导入将覆盖当前本地数据，是否继续？")) {
+                    event.target.value = "";
+                    return;
+                }
+
+                db = importedDB || {};
+
+                if (result.budget) {
+                    monthBudget = Number(result.budget) || monthBudget;
+                    localStorage.setItem(BUDGET_KEY, String(monthBudget));
+                    document.getElementById("budgetInput").value = monthBudget;
+                }
+
+                Object.keys(db).forEach(date => {
+                    if (!db[date].entries) db[date].entries = [];
+                    recalculateDay(date);
+                });
+
+                refreshAll();
+                showDayDetail(todayStr);
+                alert("导入成功");
+            } catch (err) {
+                alert("导入失败：文件格式不正确");
+            } finally {
+                event.target.value = "";
+            }
+        };
+        reader.readAsText(file, "utf-8");
+    }
+
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
