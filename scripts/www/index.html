@@ -1,254 +1,1068 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>骑士看板 v5.6</title>
+    <meta charset="UTF-8" />
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>骑士看板 v6.2</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary: #3498db; --success: #2ecc71; --danger: #e74c3c; --bg: #f4f7f9; --card: #ffffff; --border: #dcdfe6; --warn: #f39c12; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: var(--bg); }
-        body { font-family: system-ui, sans-serif; display: flex; flex-direction: column; }
+        :root {
+            --primary: #2f80ed;
+            --primary-dark: #1f6fe0;
+            --success: #27ae60;
+            --danger: #eb5757;
+            --warn: #f2994a;
+            --bg: #eef3f8;
+            --card: rgba(255, 255, 255, 0.96);
+            --border: #dbe4ee;
+            --text: #2c3e50;
+            --subtext: #7f8c98;
+            --shadow: 0 6px 18px rgba(31, 60, 90, 0.08);
+            --radius: 12px;
+        }
 
-        .header { background: var(--primary); color: white; padding: 0 15px; display: flex; justify-content: space-between; align-items: center; height: 38px; flex-shrink: 0; }
-        .header h2 { margin: 0; font-size: 0.85rem; }
-        .header .btns { display: flex; gap: 5px; }
-        .header button { background: rgba(255,255,255,0.2); border: 1px solid white; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; }
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-        .container { flex: 1; padding: 6px; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
-        
-        .calendar-card { background: var(--card); border-radius: 8px; padding: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); flex-shrink: 0; }
-        .calendar-header { display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 0.75rem; font-weight: bold; align-items: center; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; text-align: center; }
-        .day-name { color: #909399; font-size: 0.6rem; }
-        .day { padding: 5px 0; border-radius: 4px; font-size: 0.75rem; position: relative; }
-        .day.has-data::after { content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 3px; height: 3px; background: var(--primary); border-radius: 50%; }
-        .day.active { background: var(--primary) !important; color: white; font-weight: bold; }
-        .day.today-mark { border: 1px solid var(--primary); }
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: radial-gradient(circle at top left, #f8fbff 0%, #eef3f8 45%, #eaf0f6 100%);
+        }
 
-        .detail-card { flex: 1; background: var(--card); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; min-height: 80px; overflow: hidden; }
-        .detail-header { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 3px; margin-bottom: 4px; align-items: center; }
-        .detail-header h5 { margin: 0; font-size: 0.75rem; color: #333; }
-        .detail-header h5.editing { color: var(--danger); } /* 补录状态提醒 */
-        
-        .log-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-        .log-item { background: #f8f9fb; border-radius: 5px; padding: 6px; margin-bottom: 4px; border: 1px solid #eee; }
-        .log-item.collapsed .log-text { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
-        .log-text { font-size: 0.7rem; color: #606266; line-height: 1.3; }
-        .del-btn { color: #ccc; border:none; background:none; font-size: 0.9rem; float: right; }
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            color: var(--text);
+        }
 
-        .stats-panel { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
-        .stat-card { background: var(--card); border-radius: 8px; padding: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .stat-card h4 { margin: 0 0 5px; font-size: 0.65rem; color: #909399; display: flex; justify-content: space-between; }
-        
-        .progress-container { height: 10px; background: #f1f5f9; border-radius: 5px; overflow: hidden; }
-        #expenseBar { height: 100%; background: var(--primary); width: 0%; transition: width 0.5s; }
-        .chart-container { height: 65px; width: 100%; position: relative; }
+        .header {
+            background: linear-gradient(135deg, var(--primary), #4b9fff);
+            color: white;
+            padding: 0 12px;
+            min-height: 46px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 14px rgba(47, 128, 237, 0.22);
+        }
 
-        .input-area { background: var(--card); padding: 8px 12px; border-top: 1px solid var(--border); display: flex; gap: 8px; flex-shrink: 0; }
-        #mainInput { flex: 1; border: 1.5px solid var(--border); border-radius: 18px; padding: 0 12px; height: 36px; font-size: 0.85rem; outline: none; transition: border 0.3s; }
-        #mainInput:focus { border-color: var(--primary); }
-        .btn-send { background: var(--primary); color: white; border: none; padding: 0 15px; border-radius: 18px; font-size: 0.8rem; font-weight: bold; }
+        .header h2 {
+            margin: 0;
+            font-size: 0.92rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .header .btns {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .header button {
+            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.72);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 7px;
+            font-size: 0.66rem;
+            cursor: pointer;
+        }
+
+        .container {
+            flex: 1;
+            min-height: 0;
+            padding: 8px;
+            display: grid;
+            grid-template-rows: auto 132px minmax(220px, 1fr);
+            gap: 8px;
+        }
+
+        .calendar-card,
+        .detail-card,
+        .stat-card {
+            background: var(--card);
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            box-shadow: var(--shadow);
+            border-radius: var(--radius);
+        }
+
+        .calendar-card {
+            padding: 6px 8px;
+            min-height: 0;
+            overflow: hidden;
+            transition: all 0.25s ease;
+        }
+
+        .calendar-card.collapsed .calendar-grid {
+            display: none;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .calendar-left,
+        .calendar-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .calendar-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text);
+            min-width: 68px;
+            text-align: center;
+        }
+
+        .mini-btn {
+            border: 1px solid var(--border);
+            background: #f8fbff;
+            color: var(--text);
+            border-radius: 7px;
+            font-size: 0.68rem;
+            padding: 2px 8px;
+            cursor: pointer;
+        }
+
+        .toggle-btn {
+            border: 1px solid var(--border);
+            background: #f8fbff;
+            color: var(--primary);
+            border-radius: 7px;
+            font-size: 0.66rem;
+            padding: 2px 8px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        #editModeHint {
+            font-size: 0.6rem;
+            color: var(--warn);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        .day-name {
+            color: var(--subtext);
+            font-size: 0.58rem;
+            padding: 2px 0;
+            font-weight: 600;
+        }
+
+        .day {
+            padding: 5px 0;
+            border-radius: 7px;
+            font-size: 0.72rem;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            user-select: none;
+            background: transparent;
+        }
+
+        .day.empty {
+            visibility: hidden;
+        }
+
+        .day:hover {
+            background: #edf5ff;
+        }
+
+        .day.has-data::after {
+            content: "";
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: var(--primary);
+        }
+
+        .day.today-mark {
+            border: 1px solid rgba(47, 128, 237, 0.5);
+        }
+
+        .day.active {
+            background: linear-gradient(135deg, var(--primary), #58a6ff) !important;
+            color: white;
+            font-weight: 700;
+            box-shadow: 0 4px 10px rgba(47, 128, 237, 0.18);
+        }
+
+        .day.future {
+            color: #b6c0ca;
+        }
+
+        .detail-card {
+            height: 132px;
+            min-height: 132px;
+            max-height: 132px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 5px;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #edf1f6;
+            flex-shrink: 0;
+        }
+
+        .detail-header h5 {
+            margin: 0;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--text);
+            min-width: 0;
+        }
+
+        .detail-header h5.editing {
+            color: var(--danger);
+        }
+
+        #daySummary {
+            font-size: 0.64rem;
+            color: var(--primary);
+            font-weight: 700;
+            background: #f2f8ff;
+            padding: 3px 8px;
+            border-radius: 999px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .log-list {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-right: 2px;
+        }
+
+        .empty-state {
+            color: var(--subtext);
+            font-size: 0.72rem;
+            text-align: center;
+            padding: 22px 8px;
+        }
+
+        .log-item {
+            background: linear-gradient(180deg, #fbfdff 0%, #f5f8fc 100%);
+            border: 1px solid #e8eef5;
+            border-radius: 10px;
+            padding: 7px 8px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            transition: all 0.18s ease;
+        }
+
+        .log-top {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 3px;
+        }
+
+        .log-meta {
+            font-size: 0.62rem;
+            color: var(--subtext);
+            font-weight: 700;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .log-tags {
+            flex: 1;
+            min-width: 0;
+            font-size: 0.62rem;
+            color: var(--primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .del-btn {
+            color: #b5bec8;
+            border: none;
+            background: transparent;
+            font-size: 0.92rem;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0 2px;
+            flex-shrink: 0;
+        }
+
+        .log-text {
+            font-size: 0.69rem;
+            color: #5d6d7e;
+            line-height: 1.35;
+            word-break: break-all;
+        }
+
+        .log-item.collapsed .log-text {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .log-item.expanded .log-text {
+            display: block;
+            overflow: visible;
+        }
+
+        .stats-panel {
+            min-height: 0;
+            display: grid;
+            grid-template-rows: 88px minmax(0, 1fr);
+            gap: 8px;
+        }
+
+        .stat-card {
+            overflow: hidden;
+        }
+
+        .expense-card {
+            padding: 10px;
+        }
+
+        .chart-card {
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+
+        .stat-card h4 {
+            margin: 0 0 8px;
+            font-size: 0.67rem;
+            color: var(--subtext);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+        }
+
+        .progress-container {
+            height: 12px;
+            background: #edf3f9;
+            border-radius: 999px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+        }
+
+        #expenseBar {
+            height: 100%;
+            width: 0%;
+            transition: width 0.35s ease;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--primary), #5daeff);
+        }
+
+        .budget-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .budget-row input {
+            flex: 1;
+            min-width: 0;
+            height: 28px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0 10px;
+            font-size: 0.7rem;
+            outline: none;
+            background: #fbfdff;
+        }
+
+        .budget-row button {
+            height: 28px;
+            border: none;
+            background: linear-gradient(135deg, var(--primary), #5aa8ff);
+            color: white;
+            border-radius: 8px;
+            padding: 0 10px;
+            font-size: 0.68rem;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .chart-card .chart-container {
+            flex: 1;
+            min-height: 0;
+            width: 100%;
+            position: relative;
+        }
+
+        .chart-container {
+            width: 100%;
+            position: relative;
+            min-height: 160px;
+        }
+
+        .input-area {
+            background: rgba(255, 255, 255, 0.96);
+            border-top: 1px solid var(--border);
+            padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+            box-shadow: 0 -2px 10px rgba(31, 60, 90, 0.03);
+        }
+
+        #mainInput {
+            flex: 1;
+            min-width: 0;
+            height: 38px;
+            border: 1.5px solid var(--border);
+            border-radius: 19px;
+            padding: 0 14px;
+            font-size: 0.82rem;
+            outline: none;
+            transition: all 0.2s ease;
+            background: #fbfdff;
+        }
+
+        #mainInput:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.08);
+        }
+
+        .btn-send {
+            border: none;
+            border-radius: 19px;
+            padding: 0 16px;
+            background: linear-gradient(135deg, var(--primary), #55a3ff);
+            color: white;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .hidden-file {
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                grid-template-columns: 320px 1fr;
+                grid-template-rows: 1fr minmax(220px, 260px);
+                grid-template-areas:
+                    "calendar detail"
+                    "calendar stats";
+            }
+
+            .calendar-card { grid-area: calendar; }
+            .detail-card { 
+                grid-area: detail;
+                height: auto;
+                min-height: 0;
+                max-height: none;
+            }
+            .stats-panel { grid-area: stats; }
+        }
     </style>
 </head>
 <body>
-
-<div class="header">
-    <h2>🏍️ 骑士看板 v5.6</h2>
-    <div class="btns">
-        <button onclick="gotoToday()">今</button>
-        <button onclick="clearAllData()">清空</button>
-    </div>
-</div>
-
-<div class="container">
-    <div class="calendar-card">
-        <div class="calendar-header">
-            <span id="calendarTitle"></span>
-            <span id="editModeHint" style="font-size: 0.6rem; color: var(--warn); display: none;">补录模式开启</span>
-        </div>
-        <div class="calendar-grid" id="calendarGrid">
-            <div class="day-name">一</div><div class="day-name">二</div><div class="day-name">三</div>
-            <div class="day-name">四</div><div class="day-name">五</div><div class="day-name">六</div><div class="day-name">日</div>
+    <div class="header">
+        <h2>🏍️ 骑士看板 v6.2</h2>
+        <div class="btns">
+            <button onclick="gotoToday()">今</button>
+            <button onclick="exportData()">导出</button>
+            <button onclick="triggerImport()">导入</button>
+            <button onclick="clearAllData()">清空</button>
         </div>
     </div>
 
-    <div class="detail-card">
-        <div class="detail-header">
-            <h5 id="displayDateTitle">明细</h5>
-            <span id="daySummary" style="font-size: 0.65rem; color: var(--primary); font-weight: bold;"></span>
+    <div class="container">
+        <div class="calendar-card" id="calendarCard">
+            <div class="calendar-header">
+                <div class="calendar-left">
+                    <button class="mini-btn" onclick="changeMonth(-1)">‹</button>
+                    <span class="calendar-title" id="calendarTitle"></span>
+                    <button class="mini-btn" onclick="changeMonth(1)">›</button>
+                </div>
+                <div class="calendar-right">
+                    <button class="toggle-btn" onclick="toggleCalendar()" id="toggleCalendarBtn">收起</button>
+                    <span id="editModeHint" style="display:none;">补录模式</span>
+                </div>
+            </div>
+
+            <div class="calendar-grid" id="calendarGrid">
+                <div class="day-name">一</div>
+                <div class="day-name">二</div>
+                <div class="day-name">三</div>
+                <div class="day-name">四</div>
+                <div class="day-name">五</div>
+                <div class="day-name">六</div>
+                <div class="day-name">日</div>
+            </div>
         </div>
-        <div class="log-list" id="logList"></div>
+
+        <div class="detail-card">
+            <div class="detail-header">
+                <h5 id="displayDateTitle">明细</h5>
+                <span id="daySummary">无记录</span>
+            </div>
+            <div class="log-list" id="logList"></div>
+        </div>
+
+        <div class="stats-panel">
+            <div class="stat-card expense-card">
+                <h4>
+                    <span>月支出</span>
+                    <span id="expenseValue">¥0 / 3000</span>
+                </h4>
+                <div class="progress-container">
+                    <div id="expenseBar"></div>
+                </div>
+                <div class="budget-row">
+                    <input id="budgetInput" type="number" min="0" placeholder="设置月预算，例如 3000" />
+                    <button onclick="saveBudget()">保存预算</button>
+                </div>
+            </div>
+
+            <div class="stat-card chart-card">
+                <h4>
+                    <span>油耗趋势 (L/100km)</span>
+                    <span id="fuelStatText">暂无数据</span>
+                </h4>
+                <div class="chart-container">
+                    <canvas id="lineChart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="stats-panel">
-        <div class="stat-card">
-            <h4><span>月支出</span><span id="expenseValue">¥0 / 3000</span></h4>
-            <div class="progress-container"><div id="expenseBar"></div></div>
-        </div>
-        <div class="stat-card">
-            <h4>油耗趋势 (L/100km)</h4>
-            <div class="chart-container"><canvas id="lineChart"></canvas></div>
-        </div>
+    <div class="input-area">
+        <input type="text" id="mainInput" placeholder="请输入内容..." />
+        <button class="btn-send" onclick="processInput()">提交</button>
     </div>
-</div>
 
-<div class="input-area">
-    <input type="text" id="mainInput" placeholder="请输入内容...">
-    <button class="btn-send" onclick="processInput()">提交</button>
-</div>
+    <input class="hidden-file" id="importFile" type="file" accept=".json,application/json" />
 
-<script>
-    let db = JSON.parse(localStorage.getItem('moto_v5_db')) || {};
-    let lineChart;
-    const todayStr = new Date().toISOString().split('T')[0];
-    let activeDate = todayStr; // 默认选中今天
-    const MONTH_BUDGET = 3000;
+    <script>
+        const DB_KEY = "moto_v5_db";
+        const BUDGET_KEY = "moto_v5_budget";
+        const CALENDAR_COLLAPSED_KEY = "moto_v5_calendar_collapsed";
 
-    function init() {
-        lineChart = new Chart(document.getElementById('lineChart'), {
-            type: 'line',
-            data: { labels: [], datasets: [{ data: [], borderColor: '#2ecc71', tension: 0.4, pointRadius: 2, borderWidth: 2, fill: true, backgroundColor: 'rgba(46, 204, 113, 0.1)' }] },
-            options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { ticks: { font: { size: 8 } }, grid: { display: false } } } }
-        });
-        refreshUI();
-        showDayDetail(activeDate);
-    }
+        let db = JSON.parse(localStorage.getItem(DB_KEY)) || {};
+        let monthBudget = Number(localStorage.getItem(BUDGET_KEY)) || 3000;
+        let calendarCollapsed = localStorage.getItem(CALENDAR_COLLAPSED_KEY) === "1";
+        let lineChart = null;
 
-    function processInput() {
-        const val = document.getElementById('mainInput').value;
-        if (!val) return;
-        
-        // 核心逻辑：数据记在 activeDate 下，实现补账
-        const targetDate = activeDate;
-        
-        let exp = 0;
-        const mRegex = /(\d+(\.\d+)?)\s*(元|块)/g;
-        let m; while ((m = mRegex.exec(val)) !== null) exp += parseFloat(m[1]);
-
-        const distM = val.match(/(\d+(\.\d+)?)\s*(公里|km)/i);
-        const fuelM = val.match(/(\d+(\.\d+)?)\s*(升|L|l)/i);
-        let fInfo = null;
-        if (distM && fuelM) {
-            const d = parseFloat(distM[1]);
-            const a = parseFloat(fuelM[1]);
-            if (d > 0) fInfo = { d: d, a: a, calc: ((a / d) * 100).toFixed(1) };
+        function formatDateLocal(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, "0");
+            const d = String(date.getDate()).padStart(2, "0");
+            return `${y}-${m}-${d}`;
         }
 
-        if (!db[targetDate]) db[targetDate] = { entries: [], totalExp: 0, avgFuel: null };
-        
-        // 如果是补账，时间标记为“补”，否则标记当前时间
-        const displayTime = (targetDate === todayStr) 
-            ? new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
-            : "补";
+        const today = new Date();
+        const todayStr = formatDateLocal(today);
+        let activeDate = todayStr;
+        let currentViewYear = today.getFullYear();
+        let currentViewMonth = today.getMonth();
 
-        db[targetDate].entries.push({ id: Date.now(), time: displayTime, text: val, expense: exp, fuel: fInfo });
-        recalculateDay(targetDate);
-        saveAndRefresh();
-        showDayDetail(targetDate);
-        
-        document.getElementById('mainInput').value = '';
-        // 提交后不强制 blur，方便连续补账
-    }
+        function init() {
+            document.getElementById("budgetInput").value = monthBudget;
+            applyCalendarState();
 
-    function recalculateDay(date) {
-        if (!db[date]) return;
-        let dayTotal = 0, lastFuel = null;
-        db[date].entries.forEach(e => { dayTotal += e.expense; if (e.fuel) lastFuel = e.fuel.calc; });
-        db[date].totalExp = dayTotal; db[date].avgFuel = lastFuel;
-    }
-
-    function showDayDetail(date) {
-        activeDate = date;
-        const titleEl = document.getElementById('displayDateTitle');
-        const hintEl = document.getElementById('editModeHint');
-        
-        // 如果点击的不是今天，进入补录提醒模式
-        if (date !== todayStr) {
-            titleEl.innerText = `补录：${date.substring(5)}`;
-            titleEl.classList.add('editing');
-            hintEl.style.display = 'inline';
-            document.getElementById('mainInput').placeholder = `补录 ${date} 的数据...`;
-        } else {
-            titleEl.innerText = `今日记录`;
-            titleEl.classList.remove('editing');
-            hintEl.style.display = 'none';
-            document.getElementById('mainInput').placeholder = `输入: 吃饭20元, 200km用8L油...`;
-        }
-
-        const list = document.getElementById('logList'), summary = document.getElementById('daySummary');
-        list.innerHTML = '';
-        if (db[date]) {
-            summary.innerHTML = `¥${db[date].totalExp.toFixed(1)}${db[date].avgFuel ? ' | '+db[date].avgFuel+'L' : ''}`;
-            db[date].entries.forEach(e => {
-                const item = document.createElement('div');
-                item.className = 'log-item collapsed';
-                item.onclick = function() { this.classList.toggle('collapsed'); };
-                item.innerHTML = `<button class="del-btn" onclick="event.stopPropagation();deleteEntry('${date}', ${e.id})">×</button><div class="log-text"><b>${e.time}</b> ${e.text}</div>`;
-                list.appendChild(item);
+            lineChart = new Chart(document.getElementById("lineChart"), {
+                type: "line",
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        borderColor: "#27ae60",
+                        tension: 0.35,
+                        pointRadius: 2.5,
+                        pointHoverRadius: 3,
+                        borderWidth: 2,
+                        fill: true,
+                        backgroundColor: "rgba(39, 174, 96, 0.12)"
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    return `${ctx.parsed.y} L/100km`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { font: { size: 8 } },
+                            grid: { display: false }
+                        },
+                        y: {
+                            ticks: { font: { size: 8 } },
+                            grid: { color: "rgba(0,0,0,0.05)" }
+                        }
+                    }
+                }
             });
-        } else {
-            summary.innerText = "无记录";
+
+            bindEvents();
+            refreshAll();
+            showDayDetail(activeDate);
         }
-        
-        // 点击日期后输入框自动获得焦点
-        document.getElementById('mainInput').focus();
-        renderCalendar();
-    }
 
-    function gotoToday() {
-        showDayDetail(todayStr);
-    }
+        function bindEvents() {
+            const input = document.getElementById("mainInput");
+            input.addEventListener("keydown", function(e) {
+                if (e.key === "Enter") processInput();
+            });
 
-    function renderCalendar() {
-        const grid = document.getElementById('calendarGrid'), now = new Date();
-        document.getElementById('calendarTitle').innerText = `${now.getFullYear()}.${now.getMonth()+1}`;
-        const names = Array.from(grid.querySelectorAll('.day-name'));
-        grid.innerHTML = ''; names.forEach(n => grid.appendChild(n));
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).getDay() || 7;
-        const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-        for (let i = 1; i < firstDay; i++) grid.appendChild(document.createElement('div'));
-        for (let d = 1; d <= daysInMonth; d++) {
-            const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            const dayEl = document.createElement('div');
-            dayEl.className = 'day';
-            if (db[dateStr]) dayEl.classList.add('has-data');
-            if (dateStr === activeDate) dayEl.classList.add('active');
-            if (dateStr === todayStr) dayEl.classList.add('today-mark');
-            dayEl.innerText = d;
-            dayEl.onclick = () => showDayDetail(dateStr);
-            grid.appendChild(dayEl);
+            document.getElementById("importFile").addEventListener("change", importData);
+
+            window.addEventListener("resize", function() {
+                refreshChartSize();
+            });
         }
-    }
 
-    function deleteEntry(date, id) {
-        if(confirm("删除该条记录？")) {
+        function refreshChartSize() {
+            if (!lineChart) return;
+            setTimeout(() => {
+                lineChart.resize();
+                lineChart.update("none");
+            }, 60);
+        }
+
+        function applyCalendarState() {
+            const card = document.getElementById("calendarCard");
+            const btn = document.getElementById("toggleCalendarBtn");
+            if (!card || !btn) return;
+
+            if (calendarCollapsed) {
+                card.classList.add("collapsed");
+                btn.innerText = "展开";
+            } else {
+                card.classList.remove("collapsed");
+                btn.innerText = "收起";
+            }
+        }
+
+        function toggleCalendar() {
+            calendarCollapsed = !calendarCollapsed;
+            localStorage.setItem(CALENDAR_COLLAPSED_KEY, calendarCollapsed ? "1" : "0");
+            applyCalendarState();
+            refreshChartSize();
+        }
+
+        function saveDB() {
+            localStorage.setItem(DB_KEY, JSON.stringify(db));
+        }
+
+        function refreshAll() {
+            saveDB();
+            renderCalendar();
+            updateCharts();
+        }
+
+        function saveBudget() {
+            const val = Number(document.getElementById("budgetInput").value);
+            if (!val || val < 0) {
+                alert("请输入有效预算");
+                return;
+            }
+            monthBudget = val;
+            localStorage.setItem(BUDGET_KEY, String(monthBudget));
+            updateCharts();
+            alert("预算已保存");
+        }
+
+        function processInput() {
+            const inputEl = document.getElementById("mainInput");
+            const val = inputEl.value.trim();
+            if (!val) return;
+
+            const targetDate = activeDate;
+
+            let exp = 0;
+            const moneyRegex = /(\d+(\.\d+)?)\s*(元|块)/g;
+            let moneyMatch;
+            while ((moneyMatch = moneyRegex.exec(val)) !== null) {
+                exp += parseFloat(moneyMatch[1]);
+            }
+
+            const distM = val.match(/(\d+(\.\d+)?)\s*(公里|km)/i);
+            const fuelM = val.match(/(\d+(\.\d+)?)\s*(升|L|l)/i);
+
+            let fInfo = null;
+            if (distM && fuelM) {
+                const distance = parseFloat(distM[1]);
+                const amount = parseFloat(fuelM[1]);
+                if (distance > 0 && amount >= 0) {
+                    fInfo = {
+                        d: distance,
+                        a: amount,
+                        calc: Number(((amount / distance) * 100).toFixed(1))
+                    };
+                }
+            }
+
+            if (!db[targetDate]) {
+                db[targetDate] = {
+                    entries: [],
+                    totalExp: 0,
+                    avgFuel: null
+                };
+            }
+
+            const displayTime =
+                targetDate === todayStr
+                    ? new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                    : "补录";
+
+            db[targetDate].entries.push({
+                id: Date.now() + Math.floor(Math.random() * 1000),
+                time: displayTime,
+                text: val,
+                expense: exp,
+                fuel: fInfo
+            });
+
+            recalculateDay(targetDate);
+            refreshAll();
+            showDayDetail(targetDate);
+
+            inputEl.value = "";
+            inputEl.focus();
+        }
+
+        function recalculateDay(date) {
+            if (!db[date]) return;
+
+            let dayTotal = 0;
+            let fuelList = [];
+
+            db[date].entries.forEach(e => {
+                dayTotal += Number(e.expense || 0);
+                if (e.fuel && e.fuel.calc !== null && e.fuel.calc !== undefined) {
+                    fuelList.push(Number(e.fuel.calc));
+                }
+            });
+
+            db[date].totalExp = dayTotal;
+            db[date].avgFuel = fuelList.length
+                ? Number((fuelList.reduce((a, b) => a + b, 0) / fuelList.length).toFixed(1))
+                : null;
+        }
+
+        function showDayDetail(date) {
+            activeDate = date;
+
+            const titleEl = document.getElementById("displayDateTitle");
+            const hintEl = document.getElementById("editModeHint");
+            const inputEl = document.getElementById("mainInput");
+
+            const [year, month] = date.split("-");
+            currentViewYear = Number(year);
+            currentViewMonth = Number(month) - 1;
+
+            if (date !== todayStr) {
+                titleEl.innerText = `补录：${date}`;
+                titleEl.classList.add("editing");
+                hintEl.style.display = "inline";
+                inputEl.placeholder = `补录 ${date} 的数据...`;
+            } else {
+                titleEl.innerText = "今日记录";
+                titleEl.classList.remove("editing");
+                hintEl.style.display = "none";
+                inputEl.placeholder = "输入: 吃饭20元, 200km用8L油...";
+            }
+
+            const list = document.getElementById("logList");
+            const summary = document.getElementById("daySummary");
+            list.innerHTML = "";
+
+            if (db[date] && db[date].entries.length) {
+                const dayData = db[date];
+                summary.innerHTML = `¥${dayData.totalExp.toFixed(1)}${dayData.avgFuel ? " | " + dayData.avgFuel + "L" : ""}`;
+
+                dayData.entries.slice().reverse().forEach(e => {
+                    const item = document.createElement("div");
+                    item.className = "log-item collapsed";
+
+                    item.onclick = function() {
+                        this.classList.toggle("collapsed");
+                        this.classList.toggle("expanded");
+                    };
+
+                    const tags = [];
+                    if (e.expense > 0) tags.push(`支出¥${e.expense}`);
+                    if (e.fuel) tags.push(`油耗${e.fuel.calc}L`);
+
+                    item.innerHTML = `
+                        <div class="log-top">
+                            <span class="log-meta">${e.time}</span>
+                            <span class="log-tags">${tags.join(" ｜ ")}</span>
+                            <button class="del-btn" onclick="event.stopPropagation();deleteEntry('${date}', ${e.id})">×</button>
+                        </div>
+                        <div class="log-text">${escapeHtml(e.text)}</div>
+                    `;
+                    list.appendChild(item);
+                });
+            } else {
+                summary.innerText = "无记录";
+                list.innerHTML = `<div class="empty-state">这一天还没有记录，开始补一条吧</div>`;
+            }
+
+            renderCalendar();
+            inputEl.focus();
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById("calendarGrid");
+            document.getElementById("calendarTitle").innerText = `${currentViewYear}.${currentViewMonth + 1}`;
+
+            grid.innerHTML = `
+                <div class="day-name">一</div>
+                <div class="day-name">二</div>
+                <div class="day-name">三</div>
+                <div class="day-name">四</div>
+                <div class="day-name">五</div>
+                <div class="day-name">六</div>
+                <div class="day-name">日</div>
+            `;
+
+            const firstDay = new Date(currentViewYear, currentViewMonth, 1).getDay() || 7;
+            const daysInMonth = new Date(currentViewYear, currentViewMonth + 1, 0).getDate();
+
+            for (let i = 1; i < firstDay; i++) {
+                const empty = document.createElement("div");
+                empty.className = "day empty";
+                empty.innerText = ".";
+                grid.appendChild(empty);
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${currentViewYear}-${String(currentViewMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                const dayEl = document.createElement("div");
+                dayEl.className = "day";
+
+                if (db[dateStr] && db[dateStr].entries && db[dateStr].entries.length) {
+                    dayEl.classList.add("has-data");
+                }
+                if (dateStr === activeDate) dayEl.classList.add("active");
+                if (dateStr === todayStr) dayEl.classList.add("today-mark");
+                if (dateStr > todayStr) dayEl.classList.add("future");
+
+                dayEl.innerText = d;
+                dayEl.onclick = () => showDayDetail(dateStr);
+                grid.appendChild(dayEl);
+            }
+        }
+
+        function changeMonth(offset) {
+            currentViewMonth += offset;
+            if (currentViewMonth < 0) {
+                currentViewMonth = 11;
+                currentViewYear--;
+            } else if (currentViewMonth > 11) {
+                currentViewMonth = 0;
+                currentViewYear++;
+            }
+            renderCalendar();
+            updateCharts();
+        }
+
+        function gotoToday() {
+            showDayDetail(todayStr);
+        }
+
+        function deleteEntry(date, id) {
+            if (!confirm("删除该条记录？")) return;
+            if (!db[date] || !db[date].entries) return;
+
             db[date].entries = db[date].entries.filter(e => e.id !== id);
-            if(!db[date].entries.length) delete db[date]; else recalculateDay(date);
-            saveAndRefresh(); showDayDetail(date);
+
+            if (!db[date].entries.length) {
+                delete db[date];
+            } else {
+                recalculateDay(date);
+            }
+
+            refreshAll();
+            showDayDetail(date);
         }
-    }
 
-    function clearAllData() { if(confirm("⚠️ 清空所有历史数据？")) { db={}; saveAndRefresh(); showDayDetail(todayStr); } }
-    function saveAndRefresh() { localStorage.setItem('moto_v5_db', JSON.stringify(db)); renderCalendar(); updateCharts(); }
+        function clearAllData() {
+            if (!confirm("⚠️ 清空所有历史数据？")) return;
+            db = {};
+            refreshAll();
+            showDayDetail(todayStr);
+        }
 
-    function updateCharts() {
-        const curMonth = new Date().toISOString().substring(0, 7);
-        let mExp = 0, fPoints = [];
-        Object.keys(db).sort().forEach(d => {
-            if (d.startsWith(curMonth)) mExp += db[d].totalExp;
-            if (db[d].avgFuel) fPoints.push({ x: d.substring(5), y: db[d].avgFuel });
-        });
-        const percentage = Math.min((mExp / MONTH_BUDGET) * 100, 100);
-        document.getElementById('expenseBar').style.width = percentage + '%';
-        document.getElementById('expenseValue').innerText = `¥${mExp.toFixed(0)} / ${MONTH_BUDGET}`;
-        document.getElementById('expenseBar').style.background = percentage > 90 ? 'var(--danger)' : 'var(--primary)';
-        lineChart.data.labels = fPoints.map(p => p.x);
-        lineChart.data.datasets[0].data = fPoints.map(p => p.y);
-        lineChart.update();
-    }
-    window.onload = init;
-</script>
+        function updateCharts() {
+            const curMonth = `${currentViewYear}-${String(currentViewMonth + 1).padStart(2, "0")}`;
+            let monthExpense = 0;
+            let fuelPoints = [];
+
+            Object.keys(db).sort().forEach(date => {
+                const item = db[date];
+                if (date.startsWith(curMonth)) {
+                    monthExpense += Number(item.totalExp || 0);
+                    if (item.avgFuel !== null && item.avgFuel !== undefined) {
+                        fuelPoints.push({
+                            x: date.substring(5),
+                            y: Number(item.avgFuel)
+                        });
+                    }
+                }
+            });
+
+            const percentage = monthBudget > 0 ? Math.min((monthExpense / monthBudget) * 100, 100) : 0;
+            const expenseBar = document.getElementById("expenseBar");
+            expenseBar.style.width = percentage + "%";
+            expenseBar.style.background =
+                percentage >= 100
+                    ? "linear-gradient(90deg, #eb5757, #ff7676)"
+                    : percentage >= 90
+                    ? "linear-gradient(90deg, #f2994a, #ffb366)"
+                    : "linear-gradient(90deg, #2f80ed, #5daeff)";
+
+            document.getElementById("expenseValue").innerText = `¥${monthExpense.toFixed(0)} / ${monthBudget}`;
+
+            if (fuelPoints.length) {
+                const avgFuel = fuelPoints.reduce((sum, item) => sum + item.y, 0) / fuelPoints.length;
+                document.getElementById("fuelStatText").innerText = `月均 ${avgFuel.toFixed(1)}L`;
+            } else {
+                document.getElementById("fuelStatText").innerText = "暂无数据";
+            }
+
+            lineChart.data.labels = fuelPoints.map(p => p.x);
+            lineChart.data.datasets[0].data = fuelPoints.map(p => p.y);
+            refreshChartSize();
+        }
+
+        function exportData() {
+            const payload = {
+                version: "6.2",
+                exportTime: new Date().toLocaleString(),
+                budget: monthBudget,
+                data: db
+            };
+
+            const blob = new Blob([JSON.stringify(payload, null, 2)], {
+                type: "application/json"
+            });
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `骑士看板备份_${todayStr}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function triggerImport() {
+            document.getElementById("importFile").click();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const result = JSON.parse(e.target.result);
+                    const importedDB = result.data || result;
+
+                    if (!importedDB || typeof importedDB !== "object") {
+                        throw new Error("数据内容无效");
+                    }
+
+                    if (!confirm("导入将覆盖当前本地数据，是否继续？")) {
+                        event.target.value = "";
+                        return;
+                    }
+
+                    db = importedDB || {};
+
+                    if (result.budget) {
+                        monthBudget = Number(result.budget) || monthBudget;
+                        localStorage.setItem(BUDGET_KEY, String(monthBudget));
+                        document.getElementById("budgetInput").value = monthBudget;
+                    }
+
+                    Object.keys(db).forEach(date => {
+                        if (!db[date].entries) db[date].entries = [];
+                        recalculateDay(date);
+                    });
+
+                    refreshAll();
+                    showDayDetail(todayStr);
+                    alert("导入成功");
+                } catch (err) {
+                    alert("导入失败：文件格式不正确");
+                } finally {
+                    event.target.value = "";
+                }
+            };
+            reader.readAsText(file, "utf-8");
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        window.onload = init;
+    </script>
 </body>
 </html>
